@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Quran Web App Colors -->
+    <color name="primary_dark_green">#1D4337</color>
+    <color name="background_gray">#F7F8F7</color>
+    <color name="accent_gold">#C5A35E</color>
+    <color name="text_primary">#2D312E</color>
+    <color name="text_secondary">#7A817D</color>
+    <color name="banner_light_blue">#E9F2F1</color>
+    <color name="progress_green">#347A6A</color>
+</resources>
