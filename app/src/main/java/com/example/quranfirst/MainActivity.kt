@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
 
@@ -71,7 +72,23 @@ class MainActivity : AppCompatActivity() {
             }
         }
         
+        schedulePrayerUpdateWorker()
         requestPermissionsAndFetchLocation()
+    }
+
+    private fun schedulePrayerUpdateWorker() {
+        val prayerUpdateWorkRequest = PeriodicWorkRequestBuilder<PrayerUpdateWorker>(
+            repeatInterval = 30,
+            repeatIntervalTimeUnit = TimeUnit.DAYS
+        )
+        .setInitialDelay(2, TimeUnit.DAYS)
+        .build()
+
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "PrayerUpdateWorker",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            prayerUpdateWorkRequest
+        )
     }
 
     private fun requestPermissionsAndFetchLocation() {
@@ -117,6 +134,7 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: SecurityException) {
             e.printStackTrace()
+            updatePrayerTimesForCity(1)
         }
     }
 
@@ -124,37 +142,43 @@ class MainActivity : AppCompatActivity() {
         val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
         lifecycleScope.launch {
-            val db = AppDatabase.getDatabase(this@MainActivity)
-            var prayerTime = withContext(Dispatchers.IO) {
-                db.prayerDao().getPrayerTimesByDate(villeId, todayStr)
-            }
+            try {
+                val db = AppDatabase.getDatabase(this@MainActivity)
+                var prayerTime = withContext(Dispatchers.IO) {
+                    db.prayerDao().getPrayerTimesByDate(villeId, todayStr)
+                }
 
-            if (prayerTime != null) {
-                displayPrayerTimes(prayerTime)
-                scheduleAlarms(prayerTime)
-            } else {
-                // Fetch from WorkManager
-                val inputData = Data.Builder().putInt("VILLE_ID", villeId).build()
-                val fetchWork = OneTimeWorkRequestBuilder<PrayerUpdateWorker>()
-                    .setInputData(inputData)
-                    .build()
+                if (prayerTime != null) {
+                    displayPrayerTimes(prayerTime)
+                    scheduleAlarms(prayerTime)
+                } else {
+                    // Fetch from WorkManager
+                    val inputData = Data.Builder().putInt("VILLE_ID", villeId).build()
+                    val fetchWork = OneTimeWorkRequestBuilder<PrayerUpdateWorker>()
+                        .setInputData(inputData)
+                        .build()
 
-                WorkManager.getInstance(this@MainActivity).enqueue(fetchWork)
-                
-                WorkManager.getInstance(this@MainActivity).getWorkInfoByIdLiveData(fetchWork.id)
-                    .observe(this@MainActivity) { workInfo ->
-                        if (workInfo != null && workInfo.state == WorkInfo.State.SUCCEEDED) {
-                            lifecycleScope.launch {
-                                val fetchedPrayer = withContext(Dispatchers.IO) {
-                                    db.prayerDao().getPrayerTimesByDate(villeId, todayStr)
-                                }
-                                fetchedPrayer?.let {
-                                    displayPrayerTimes(it)
-                                    scheduleAlarms(it)
+                    WorkManager.getInstance(this@MainActivity).enqueue(fetchWork)
+                    
+                    WorkManager.getInstance(this@MainActivity).getWorkInfoByIdLiveData(fetchWork.id)
+                        .observe(this@MainActivity) { workInfo ->
+                            if (workInfo != null && workInfo.state == WorkInfo.State.SUCCEEDED) {
+                                lifecycleScope.launch {
+                                    try {
+                                        val fetchedPrayer = withContext(Dispatchers.IO) {
+                                            db.prayerDao().getPrayerTimesByDate(villeId, todayStr)
+                                        }
+                                        fetchedPrayer?.let {
+                                            displayPrayerTimes(it)
+                                            scheduleAlarms(it)
+                                        }
+                                    } catch (e: Exception) { e.printStackTrace() }
                                 }
                             }
                         }
-                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }

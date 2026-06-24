@@ -7,11 +7,8 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.media.MediaPlayer
-import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import com.example.quranfirst.R
 import java.util.Calendar
 
 class PrayerReceiver : BroadcastReceiver() {
@@ -22,8 +19,15 @@ class PrayerReceiver : BroadcastReceiver() {
         if (isPreNotification) {
             showNotification(context, "Rappel de Prière", "Il reste 5 minutes pour la prière de $prayerName")
         } else {
-            showNotification(context, "Heure de la Prière", "C'est l'heure de la prière de $prayerName")
-            playAdhan(context)
+            // Démarrer le Foreground Service pour l'Adhan de manière fiable
+            val serviceIntent = Intent(context, AdhanForegroundService::class.java).apply {
+                putExtra("PRAYER_NAME", prayerName)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
         }
     }
 
@@ -45,24 +49,6 @@ class PrayerReceiver : BroadcastReceiver() {
             .build()
 
         notificationManager.notify(System.currentTimeMillis().toInt(), notification)
-    }
-
-    private fun playAdhan(context: Context) {
-        try {
-            val adhanId = context.resources.getIdentifier("adhan", "raw", context.packageName)
-            if (adhanId != 0) {
-                val mediaPlayer = MediaPlayer.create(context, adhanId)
-                mediaPlayer?.start()
-                mediaPlayer?.setOnCompletionListener { it.release() }
-            } else {
-                // Fallback si le fichier adhan n'est pas encore ajouté par l'utilisateur
-                val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                val r = RingtoneManager.getRingtone(context, uri)
-                r.play()
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 }
 
@@ -108,7 +94,6 @@ object PrayerScheduler {
         )
     }
     
-    // Fonction utilitaire pour parser l'heure "HH:mm" et scheudle
     fun parseAndSchedule(context: Context, prayerName: String, timeStr: String) {
         try {
             val parts = timeStr.split(":")
@@ -126,3 +111,5 @@ object PrayerScheduler {
         } catch (e: Exception) { e.printStackTrace() }
     }
 }
+
+
