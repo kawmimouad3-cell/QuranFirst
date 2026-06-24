@@ -208,6 +208,8 @@
         android:layout_height="wrap_content"
         android:background="@color/white"
         app:elevation="20dp"
+        app:itemIconTint="@color/bottom_nav_color"
+        app:itemTextColor="@color/bottom_nav_color"
         app:layout_constraintBottom_toBottomOf="parent"
         app:menu="@menu/bottom_nav_menu" />
 

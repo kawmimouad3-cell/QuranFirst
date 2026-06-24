@@ -2,22 +2,22 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/nav_home"
-        android:icon="@android:drawable/ic_menu_today"
+        android:icon="@drawable/ic_nav_home"
         android:title="الرئيسية" />
     <item
         android:id="@+id/nav_quran"
-        android:icon="@android:drawable/ic_menu_sort_by_size"
+        android:icon="@drawable/ic_nav_quran"
         android:title="القرآن" />
     <item
         android:id="@+id/nav_search"
-        android:icon="@android:drawable/ic_menu_search"
+        android:icon="@drawable/ic_nav_search"
         android:title="البحث" />
     <item
         android:id="@+id/nav_azkar"
-        android:icon="@android:drawable/ic_menu_recent_history"
+        android:icon="@drawable/ic_nav_azkar"
         android:title="الأذكار" />
     <item
         android:id="@+id/nav_more"
-        android:icon="@android:drawable/ic_menu_more"
+        android:icon="@drawable/ic_nav_more"
         android:title="المزيد" />
 </menu>

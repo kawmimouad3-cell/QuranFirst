@@ -41,21 +41,23 @@ class ReadQuranActivity : AppCompatActivity() {
         setContentView(R.layout.activity_read_quran)
 
         rvPages = findViewById(R.id.rv_pages)
-        // RTL like a real Mushaf: pages go right → left
+        // Use standard LTR and reverse populate to simulate an Arabic book layout
         rvPages.layoutManager = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
-        rvPages.layoutDirection = View.LAYOUT_DIRECTION_RTL
+        rvPages.layoutDirection = View.LAYOUT_DIRECTION_LTR
         rvPages.overScrollMode = View.OVER_SCROLL_NEVER
         snapHelper.attachToRecyclerView(rvPages)
 
         val startPage = intent.getIntExtra("START_PAGE", 1).coerceIn(1, 604)
         val endPage = intent.getIntExtra("END_PAGE", startPage).coerceIn(startPage, 604)
 
-        for (pageNumber in startPage..endPage) {
+        // Load pages in reverse order so swiping right (finger moving left-to-right) goes to next Arabic page
+        for (pageNumber in endPage downTo startPage) {
             pages.add(loadPageData(pageNumber))
         }
 
         rvPages.adapter = QuranPageAdapter(pages)
-        rvPages.scrollToPosition(0)
+        // Scroll to the end of the list where the start page is located
+        rvPages.scrollToPosition(pages.size - 1)
     }
 
     private fun loadPageData(pageNumber: Int): QuranPage {
@@ -79,7 +81,8 @@ class ReadQuranActivity : AppCompatActivity() {
                 val lineType = firstWord.optString("type", "word")
                 val lineText = StringBuilder()
 
-                for (j in 0 until wordsArray.length()) {
+                // Reverse the word order since Android treats PUA characters as LTR
+                for (j in wordsArray.length() - 1 downTo 0) {
                     val word = wordsArray.getJSONObject(j)
                     lineText.append(word.getString("char"))
                 }
