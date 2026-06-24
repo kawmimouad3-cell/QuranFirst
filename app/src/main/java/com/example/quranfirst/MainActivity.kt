@@ -188,6 +188,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private suspend fun fetchPrayersImmediately(villeId: Int, todayStr: String) {
+        withContext(Dispatchers.Main) {
+            tvNextPrayer.text = "جاري تحميل أوقات الصلاة..."
+        }
         withContext(Dispatchers.IO) {
             try {
                 val prayers = HabousScraper.getPrayerTimes(villeId)
@@ -199,10 +202,21 @@ class MainActivity : AppCompatActivity() {
                         todayPrayer?.let { 
                             displayPrayerTimes(it)
                             scheduleAlarms(it)
+                        } ?: run {
+                            tvNextPrayer.text = "بيانات اليوم غير متوفرة"
                         }
                     }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        tvNextPrayer.text = "يرجى تشغيل الإنترنت لتحديث الأوقات"
+                    }
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+            } catch (e: Exception) { 
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    tvNextPrayer.text = "حدث خطأ في الاتصال بخادم الوزارة"
+                }
+            }
         }
     }
 

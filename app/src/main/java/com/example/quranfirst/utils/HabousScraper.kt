@@ -13,7 +13,10 @@ object HabousScraper {
         val prayerData = mutableListOf<PrayerTime>()
         try {
             val url = "https://www.habous.gov.ma/prieres/index.php?ville=$villeId"
-            val doc = Jsoup.connect(url).timeout(10000).get()
+            val doc = Jsoup.connect(url)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .timeout(15000)
+                .get()
             
             val table = doc.select("table").first() ?: return@withContext emptyList()
             val rows = table.select("tr")
@@ -43,7 +46,7 @@ object HabousScraper {
                 val isha = cols[8].text().trim()
                 
                 // If it matches today's print, start aligning date from today
-                if (!todayFound && dayMonth.startsWith(currentDay)) {
+                if (!todayFound && row.hasClass("cournt")) {
                     todayFound = true
                 }
                 
