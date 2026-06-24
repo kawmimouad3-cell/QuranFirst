@@ -90,16 +90,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
         
-        schedulePrayerUpdateWorker()
+        schedulePrayerUpdateWorker(1) // will be updated after location fetch
         requestPermissionsAndFetchLocation()
     }
 
-    private fun schedulePrayerUpdateWorker() {
+    private fun schedulePrayerUpdateWorker(villeId: Int) {
+        val data = workDataOf("VILLE_ID" to villeId)
         val prayerUpdateWorkRequest = PeriodicWorkRequestBuilder<PrayerUpdateWorker>(
             repeatInterval = 30,
             repeatIntervalTimeUnit = TimeUnit.DAYS
         )
-        .setInitialDelay(2, TimeUnit.DAYS)
+        .setInputData(data)
+        .setInitialDelay(1, TimeUnit.DAYS)
         .build()
 
         WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
@@ -141,6 +143,7 @@ class MainActivity : AppCompatActivity() {
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 if (location != null) {
                     val city = CityMapper.findNearestCity(location.latitude, location.longitude)
+                    schedulePrayerUpdateWorker(city.id) // update worker with real city
                     updatePrayerTimesForCity(city.id)
                 } else {
                     updatePrayerTimesForCity(1)
@@ -216,11 +219,11 @@ class MainActivity : AppCompatActivity() {
     private fun updateCountdown() {
         val prayer = currentPrayerTime ?: return
         val times = listOf(
-            "Fajr" to prayer.fajr,
-            "Dhuhr" to prayer.dhuhr,
-            "Asr" to prayer.asr,
+            "Fajr"    to prayer.fajr,
+            "Dhuhr"   to prayer.dhuhr,
+            "Asr"     to prayer.asr,
             "Maghrib" to prayer.maghrib,
-            "Isha" to prayer.isha
+            "Isha"    to prayer.isha
         )
 
         val now = Calendar.getInstance()
@@ -234,17 +237,38 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        if (nextPrayer != null) {
-            val diff = nextPrayer.second.timeInMillis - now.timeInMillis
-            val hours = diff / (1000 * 60 * 60)
+        // If all prayers done today → show countdown to tomorrow's Fajr
+        if (nextPrayer == null) {
+            val tomorrowFajr = parseTimeToCalendar(prayer.fajr).apply {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
+            val diff = tomorrowFajr.timeInMillis - now.timeInMillis
+            val hours   = diff / (1000 * 60 * 60)
             val minutes = (diff / (1000 * 60)) % 60
             val seconds = (diff / 1000) % 60
-            
-            val timeLeftStr = String.format("%02d:%02d:%02d", hours, minutes, seconds)
-            tvNextPrayer.text = "الصلاة القادمة: ${nextPrayer.first} في $timeLeftStr"
-        } else {
-            tvNextPrayer.text = "انتهت صلوات اليوم"
+            tvNextPrayer.text = String.format(
+                Locale.getDefault(),
+                "🌄 الفجر غداً في %02d:%02d:%02d",
+                hours, minutes, seconds
+            )
+            return
         }
+
+        val diff    = nextPrayer.second.timeInMillis - now.timeInMillis
+        val hours   = diff / (1000 * 60 * 60)
+        val minutes = (diff / (1000 * 60)) % 60
+        val seconds = (diff / 1000) % 60
+
+        val emoji = mapOf(
+            "Fajr" to "🌄", "Dhuhr" to "☀️",
+            "Asr"  to "🌤️", "Maghrib" to "🌇", "Isha" to "🌙"
+        )[nextPrayer.first] ?: "🕌"
+
+        tvNextPrayer.text = String.format(
+            Locale.getDefault(),
+            "%s الصلاة القادمة: %s في %02d:%02d:%02d",
+            emoji, nextPrayer.first, hours, minutes, seconds
+        )
     }
 
     private fun parseTimeToCalendar(timeStr: String): Calendar {
