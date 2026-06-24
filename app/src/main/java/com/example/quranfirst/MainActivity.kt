@@ -1,6 +1,7 @@
 package com.example.quranfirst
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
@@ -14,9 +15,11 @@ import androidx.work.*
 import com.example.quranfirst.data.AppDatabase
 import com.example.quranfirst.data.PrayerTime
 import com.example.quranfirst.utils.CityMapper
+import com.example.quranfirst.utils.HabousScraper
 import com.example.quranfirst.utils.PrayerScheduler
 import com.example.quranfirst.work.PrayerUpdateWorker
 import com.google.android.gms.location.LocationServices
+import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,6 +31,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var textClock: TextView
     private lateinit var textDate: TextView
+    private lateinit var tvNextPrayer: TextView
+    private lateinit var switchAdhan: SwitchMaterial
     private val handler = Handler(Looper.getMainLooper())
 
     private lateinit var tvFajr: TextView
@@ -37,9 +42,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvMaghrib: TextView
     private lateinit var tvIsha: TextView
 
+    private var currentPrayerTime: PrayerTime? = null
+
     private val updateTimeRunnable = object : Runnable {
         override fun run() {
             updateClock()
+            updateCountdown()
             handler.postDelayed(this, 1000)
         }
     }
@@ -51,6 +59,9 @@ class MainActivity : AppCompatActivity() {
 
         textClock = findViewById(R.id.text_clock)
         textDate = findViewById(R.id.text_date)
+        tvNextPrayer = findViewById(R.id.tvNextPrayer)
+        switchAdhan = findViewById(R.id.switch_adhan)
+        
         tvFajr = findViewById(R.id.tv_fajr)
         tvShrouq = findViewById(R.id.tv_shrouq)
         tvDhuhr = findViewById(R.id.tv_dhuhr)
@@ -58,7 +69,14 @@ class MainActivity : AppCompatActivity() {
         tvMaghrib = findViewById(R.id.tv_maghrib)
         tvIsha = findViewById(R.id.tv_isha)
 
-        // Start the clock
+        // Adhan Settings switch
+        val sharedPrefs = getSharedPreferences("Settings", Context.MODE_PRIVATE)
+        switchAdhan.isChecked = sharedPrefs.getBoolean("adhan_enabled", true)
+        switchAdhan.setOnCheckedChangeListener { _, isChecked ->
+            sharedPrefs.edit().putBoolean("adhan_enabled", isChecked).apply()
+        }
+
+        // Start the clock and countdown
         handler.post(updateTimeRunnable)
 
         val bottomNav = findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
@@ -97,7 +115,6 @@ class MainActivity : AppCompatActivity() {
             Manifest.permission.ACCESS_COARSE_LOCATION
         )
 
-        // Request POST_NOTIFICATIONS for Android 13+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
@@ -114,7 +131,6 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == 100 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             fetchLocation()
         } else {
-            // Defaulting to Rabat if location denied
             updatePrayerTimesForCity(1) 
         }
     }
@@ -127,7 +143,7 @@ class MainActivity : AppCompatActivity() {
                     val city = CityMapper.findNearestCity(location.latitude, location.longitude)
                     updatePrayerTimesForCity(city.id)
                 } else {
-                    updatePrayerTimesForCity(1) // Rabat par défaut
+                    updatePrayerTimesForCity(1)
                 }
             }.addOnFailureListener {
                 updatePrayerTimesForCity(1)
@@ -144,7 +160,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val db = AppDatabase.getDatabase(this@MainActivity)
-                var prayerTime = withContext(Dispatchers.IO) {
+                val prayerTime = withContext(Dispatchers.IO) {
                     db.prayerDao().getPrayerTimesByDate(villeId, todayStr)
                 }
 
@@ -152,30 +168,15 @@ class MainActivity : AppCompatActivity() {
                     displayPrayerTimes(prayerTime)
                     scheduleAlarms(prayerTime)
                 } else {
-                    // Fetch from WorkManager
+                    // Start WorkManager in background for full future parsing
                     val inputData = Data.Builder().putInt("VILLE_ID", villeId).build()
                     val fetchWork = OneTimeWorkRequestBuilder<PrayerUpdateWorker>()
                         .setInputData(inputData)
                         .build()
-
                     WorkManager.getInstance(this@MainActivity).enqueue(fetchWork)
                     
-                    WorkManager.getInstance(this@MainActivity).getWorkInfoByIdLiveData(fetchWork.id)
-                        .observe(this@MainActivity) { workInfo ->
-                            if (workInfo != null && workInfo.state == WorkInfo.State.SUCCEEDED) {
-                                lifecycleScope.launch {
-                                    try {
-                                        val fetchedPrayer = withContext(Dispatchers.IO) {
-                                            db.prayerDao().getPrayerTimesByDate(villeId, todayStr)
-                                        }
-                                        fetchedPrayer?.let {
-                                            displayPrayerTimes(it)
-                                            scheduleAlarms(it)
-                                        }
-                                    } catch (e: Exception) { e.printStackTrace() }
-                                }
-                            }
-                        }
+                    // Immediately fetch inline because DB is empty
+                    fetchPrayersImmediately(villeId, todayStr)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -183,13 +184,76 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private suspend fun fetchPrayersImmediately(villeId: Int, todayStr: String) {
+        withContext(Dispatchers.IO) {
+            try {
+                val prayers = HabousScraper.getPrayerTimes(villeId)
+                if (prayers.isNotEmpty()) {
+                    val db = AppDatabase.getDatabase(this@MainActivity)
+                    db.prayerDao().insertAll(prayers)
+                    val todayPrayer = prayers.find { it.date == todayStr }
+                    withContext(Dispatchers.Main) {
+                        todayPrayer?.let { 
+                            displayPrayerTimes(it)
+                            scheduleAlarms(it)
+                        }
+                    }
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
     private fun displayPrayerTimes(prayerTime: PrayerTime) {
+        currentPrayerTime = prayerTime
         tvFajr.text = prayerTime.fajr
         tvShrouq.text = prayerTime.shrouq
         tvDhuhr.text = prayerTime.dhuhr
         tvAsr.text = prayerTime.asr
         tvMaghrib.text = prayerTime.maghrib
         tvIsha.text = prayerTime.isha
+    }
+
+    private fun updateCountdown() {
+        val prayer = currentPrayerTime ?: return
+        val times = listOf(
+            "Fajr" to prayer.fajr,
+            "Dhuhr" to prayer.dhuhr,
+            "Asr" to prayer.asr,
+            "Maghrib" to prayer.maghrib,
+            "Isha" to prayer.isha
+        )
+
+        val now = Calendar.getInstance()
+        var nextPrayer: Pair<String, Calendar>? = null
+
+        for (time in times) {
+            val prayerCal = parseTimeToCalendar(time.second)
+            if (prayerCal.after(now)) {
+                nextPrayer = time.first to prayerCal
+                break
+            }
+        }
+
+        if (nextPrayer != null) {
+            val diff = nextPrayer.second.timeInMillis - now.timeInMillis
+            val hours = diff / (1000 * 60 * 60)
+            val minutes = (diff / (1000 * 60)) % 60
+            val seconds = (diff / 1000) % 60
+            
+            val timeLeftStr = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+            tvNextPrayer.text = "الصلاة القادمة: ${nextPrayer.first} في $timeLeftStr"
+        } else {
+            tvNextPrayer.text = "انتهت صلوات اليوم"
+        }
+    }
+
+    private fun parseTimeToCalendar(timeStr: String): Calendar {
+        val parts = timeStr.split(":")
+        return Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, parts[0].toInt())
+            set(Calendar.MINUTE, parts[1].toInt())
+            set(Calendar.SECOND, 0)
+        }
     }
 
     private fun scheduleAlarms(prayer: PrayerTime) {

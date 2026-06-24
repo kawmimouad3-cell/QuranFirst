@@ -68,6 +68,13 @@ class AdhanForegroundService : Service() {
     }
 
     private fun playAdhan() {
+        val sharedPrefs = getSharedPreferences("Settings", android.content.Context.MODE_PRIVATE)
+        val isAdhanEnabled = sharedPrefs.getBoolean("adhan_enabled", true)
+        if (!isAdhanEnabled) {
+            stopSelf()
+            return
+        }
+
         try {
             val adhanId = resources.getIdentifier("adhan", "raw", packageName)
             if (adhanId != 0) {
