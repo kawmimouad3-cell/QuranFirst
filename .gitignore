@@ -55,3 +55,6 @@ quran-qcf4-main/
 
 # Font resources (large binary files - included via assets)
 app/src/main/res/font/
+
+# Large font files (download separately)
+app/src/main/assets/fonts/
