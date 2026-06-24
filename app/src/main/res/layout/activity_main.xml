@@ -107,38 +107,48 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="20dp"
-                        android:orientation="horizontal"
-                        android:weightSum="3"
+                        android:orientation="vertical"
                         app:layout_constraintTop_toBottomOf="@id/divider">
 
+                        <!-- Top row -->
                         <LinearLayout
-                            android:layout_width="0dp"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fajr" android:textColor="@color/white" android:alpha="0.6" android:textSize="12sp"/>
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="04:12" android:textColor="@color/white" android:textStyle="bold" android:textSize="16sp"/>
+                            android:orientation="horizontal"
+                            android:weightSum="3">
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fajr" android:textColor="@color/white" android:alpha="0.6" android:textSize="12sp"/>
+                                <TextView android:id="@+id/tv_fajr" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="@color/white" android:textStyle="bold" android:textSize="16sp"/>
+                            </LinearLayout>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Shrouq" android:textColor="@color/white" android:alpha="0.6" android:textSize="12sp"/>
+                                <TextView android:id="@+id/tv_shrouq" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="@color/white" android:textStyle="bold" android:textSize="16sp"/>
+                            </LinearLayout>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dhuhr" android:textColor="@color/white" android:alpha="0.6" android:textSize="12sp"/>
+                                <TextView android:id="@+id/tv_dhuhr" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="@color/white" android:textStyle="bold" android:textSize="16sp"/>
+                            </LinearLayout>
                         </LinearLayout>
 
+                        <!-- Bottom row -->
                         <LinearLayout
-                            android:layout_width="0dp"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dhuhr" android:textColor="@color/white" android:alpha="0.6" android:textSize="12sp"/>
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="13:20" android:textColor="@color/white" android:textStyle="bold" android:textSize="16sp"/>
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Asr" android:textColor="@color/white" android:alpha="0.6" android:textSize="12sp"/>
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="17:05" android:textColor="@color/white" android:textStyle="bold" android:textSize="16sp"/>
+                            android:layout_marginTop="16dp"
+                            android:orientation="horizontal"
+                            android:weightSum="3">
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Asr" android:textColor="@color/white" android:alpha="0.6" android:textSize="12sp"/>
+                                <TextView android:id="@+id/tv_asr" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="@color/white" android:textStyle="bold" android:textSize="16sp"/>
+                            </LinearLayout>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Maghrib" android:textColor="@color/white" android:alpha="0.6" android:textSize="12sp"/>
+                                <TextView android:id="@+id/tv_maghrib" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="@color/white" android:textStyle="bold" android:textSize="16sp"/>
+                            </LinearLayout>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Isha" android:textColor="@color/white" android:alpha="0.6" android:textSize="12sp"/>
+                                <TextView android:id="@+id/tv_isha" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--:--" android:textColor="@color/white" android:textStyle="bold" android:textSize="16sp"/>
+                            </LinearLayout>
                         </LinearLayout>
 
                     </LinearLayout>
